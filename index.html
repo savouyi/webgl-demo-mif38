@@ -8,22 +8,24 @@
     <script src="js/glMatrix-0.9.5.min.js"></script>
     <script src="js/webgl-utils.js"></script>
 
+    <script src="js/WebGL.js"></script>
+
     <script src="js/Main.js"></script>
 </head>
 <body>
     <script id="vertex-shader" type="x-shader/x-vertex">
-        attribute vec3 aVertexPosition;
-        attribute vec2 aTextureCoord;
+        attribute vec3 aVP;
+        attribute vec2 aTC;
 
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
+        uniform mat4 uMV;
+        uniform mat4 uPM;
 
         varying vec2 vTextureCoord;
 
 
         void main(void) {
-        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-        vTextureCoord = aTextureCoord;
+        gl_Position = uPM * uMV * vec4(aVP, 1.0);
+        vTextureCoord = aTC;
         }
     </script>
     <script id="fragment-shader" type="x-shader/x-fragment">
@@ -39,5 +41,6 @@
     <canvas id="dessin" width="300" height="300">
 
     </canvas>
+    <canvas id="dessin2" width="300" height="300"></canvas>
 </body>
 </html>

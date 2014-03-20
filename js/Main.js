@@ -1,13 +1,38 @@
 ﻿
 $(function () {
 
-    console.log($('#vertex-shader').html());
-    console.log($('#fragment-shader').html());
+    var g = new GL('dessin2');
+    var pt = new PROGRAM.texture(g.gl, 'vertex-shader', 'fragment-shader');
 
-    var vertex = $('#vertex-shader').html();
-    var fragment = $('#fragment-shader').html();
+    var mvMatrix = mat4.create();
+    var mvMatrixStack = [];
+    var pMatrix = mat4.create();
 
-    var gl;
+    function handleLoadedTexture(texture) {
+        g.gl.bindTexture(g.gl.TEXTURE_2D, texture);
+        g.gl.pixelStorei(g.gl.UNPACK_FLIP_Y_WEBGL, true);
+        g.gl.texImage2D(g.gl.TEXTURE_2D, 0, g.gl.RGBA, g.gl.RGBA, g.gl.UNSIGNED_BYTE, texture.image);
+        g.gl.texParameteri(g.gl.TEXTURE_2D, g.gl.TEXTURE_MAG_FILTER, g.gl.NEAREST);
+        g.gl.texParameteri(g.gl.TEXTURE_2D, g.gl.TEXTURE_MIN_FILTER, g.gl.NEAREST);
+        g.gl.bindTexture(g.gl.TEXTURE_2D, null);
+    }
+
+
+    var hehe;
+
+    function initTexture() {
+        hehe = g.gl.createTexture();
+        hehe.image = new Image();
+        hehe.image.onload = function () {
+            handleLoadedTexture(hehe)
+        }
+
+        hehe.image.src = "images/bamboo.png";
+    }
+
+    initTexture();
+
+    /*var gl;
 
     function initGL(canvas) {
         try {
@@ -74,6 +99,7 @@ $(function () {
         }
 
         gl.useProgram(shaderProgram);
+        //switchPrograms(gl, shaderProgram);
 
         shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
         gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
@@ -109,10 +135,10 @@ $(function () {
         neheTexture.image.src = "images/bamboo.png";
     }
 
+    
 
-    var mvMatrix = mat4.create();
-    var mvMatrixStack = [];
-    var pMatrix = mat4.create();
+
+    
 
     function mvPushMatrix() {
         var copy = mat4.create();
@@ -263,6 +289,8 @@ $(function () {
         mat4.rotate(mvMatrix, degToRad(yRot), [0, 1, 0]);
         mat4.rotate(mvMatrix, degToRad(zRot), [0, 0, 1]);
 
+        //switchPrograms(gl, shaderProgram);
+
         gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -314,5 +342,104 @@ $(function () {
         tick();
     }
 
-    webGLStart();
+    webGLStart();*/
+
+    var bv = new BUFFER(g.gl, [
+            // Front face
+            -1.0, -1.0, 1.0,
+             1.0, -1.0, 1.0,
+             1.0, 1.0, 1.0,
+            -1.0, 1.0, 1.0,
+
+            // Back face
+            -1.0, -1.0, -1.0,
+            -1.0, 1.0, -1.0,
+             1.0, 1.0, -1.0,
+             1.0, -1.0, -1.0,
+
+            // Top face
+            -1.0, 1.0, -1.0,
+            -1.0, 1.0, 1.0,
+             1.0, 1.0, 1.0,
+             1.0, 1.0, -1.0,
+
+            // Bottom face
+            -1.0, -1.0, -1.0,
+             1.0, -1.0, -1.0,
+             1.0, -1.0, 1.0,
+            -1.0, -1.0, 1.0,
+
+            // Right face
+             1.0, -1.0, -1.0,
+             1.0, 1.0, -1.0,
+             1.0, 1.0, 1.0,
+             1.0, -1.0, 1.0,
+
+            // Left face
+            -1.0, -1.0, -1.0,
+            -1.0, -1.0, 1.0,
+            -1.0, 1.0, 1.0,
+            -1.0, 1.0, -1.0,
+    ], 3,false);
+
+    var bt = new BUFFER(g.gl, [
+      // Front face
+      0.0, 0.0,
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+
+      // Back face
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+      0.0, 0.0,
+
+      // Top face
+      0.0, 1.0,
+      0.0, 0.0,
+      1.0, 0.0,
+      1.0, 1.0,
+
+      // Bottom face
+      1.0, 1.0,
+      0.0, 1.0,
+      0.0, 0.0,
+      1.0, 0.0,
+
+      // Right face
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+      0.0, 0.0,
+
+      // Left face
+      0.0, 0.0,
+      1.0, 0.0,
+      1.0, 1.0,
+      0.0, 1.0,
+    ], 2,false);
+
+    var bi = new BUFFER(g.gl, [
+        0, 1, 2, 0, 2, 3,    // Front face
+        4, 5, 6, 4, 6, 7,    // Back face
+        8, 9, 10, 8, 10, 11,  // Top face
+        12, 13, 14, 12, 14, 15, // Bottom face
+        16, 17, 18, 16, 18, 19, // Right face
+        20, 21, 22, 20, 22, 23  // Left face
+    ],1, true);
+
+    setInterval(function () {
+        g.gl.viewport(0, 0, g.gl.viewportWidth, g.gl.viewportHeight);
+        g.gl.clear(g.gl.COLOR_BUFFER_BIT | g.gl.DEPTH_BUFFER_BIT);
+
+        mat4.perspective(45, g.gl.viewportWidth / g.gl.viewportHeight, 0.1, 100.0, pMatrix);
+
+        mat4.identity(mvMatrix);
+
+        mat4.translate(mvMatrix, [0.0, 0.0, -5.0]);
+
+        if (hehe.image.complete)
+            pt.draw([bv.buffer, bt.buffer, bi.buffer], hehe, pMatrix, mvMatrix);
+    }, 100);
 });
