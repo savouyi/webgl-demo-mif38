@@ -33,7 +33,7 @@ function switchPrograms(gl, newProgram) {
     // Gets the number of attributes in the current and new programs
     var currentProgram = curr;
 
-    if (curr != null) {
+    if (curr != null && curr != newProgram) {
 
         var currentAttributes = gl.getProgramParameter(currentProgram, gl.ACTIVE_ATTRIBUTES);
         var newAttributes = gl.getProgramParameter(newProgram, gl.ACTIVE_ATTRIBUTES);
@@ -59,6 +59,8 @@ function switchPrograms(gl, newProgram) {
     gl.useProgram(newProgram);
 
     curr = newProgram;
+
+    //console.log(newProgram.nom);
 }
 
 var BUFFER = function (gl, v, s, index) {
@@ -80,7 +82,7 @@ var BUFFER = function (gl, v, s, index) {
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(v), gl.STATIC_DRAW);
 
         o.buffer.itemSize = 1;
-        o.buffer.numItems = v.length;
+        o.buffer.numItems = parseInt(v.length);
     }
 };
 
@@ -117,8 +119,10 @@ var PROGRAM = {
             var s = new SHADER(gl, id_vertex, id_fragment);
 
             o.gl = gl;
+            
 
             o.p = gl.createProgram();
+            o.p.nom = 'texture';
             gl.attachShader(o.p, s.sv);
             gl.attachShader(o.p, s.sf);
             gl.linkProgram(o.p);
@@ -139,19 +143,140 @@ var PROGRAM = {
             o.p.uPM = gl.getUniformLocation(o.p, "uPM");
             o.p.uMV = gl.getUniformLocation(o.p, "uMV");
             o.p.samplerUniform = gl.getUniformLocation(o.p, "uSampler");
+
+            console.log('tex ' + o.p.aVP + ' ' + 
+                o.p.aTC + ' ');
+        },
+    textureLight:
+        function (gl, id_vertex, id_fragment) {
+            var o = this;
+            var s = new SHADER(gl, id_vertex, id_fragment);
+
+            o.gl = gl;
+            
+
+            o.p = gl.createProgram();
+            o.p.nom = 'texture light';
+            var shaderProgram = o.p;
+
+            gl.attachShader(o.p, s.sv);
+            gl.attachShader(o.p, s.sf);
+            gl.linkProgram(o.p);
+
+            if (!gl.getProgramParameter(o.p, gl.LINK_STATUS)) {
+                alert("Could not initialise shaders");
+            }
+
+            //gl.useProgram(shaderProgram);
+            switchPrograms(gl, o.p);
+
+            o.p.vertexPositionAttribute = gl.getAttribLocation(o.p, "aVertexPosition");
+            gl.enableVertexAttribArray(o.p.vertexPositionAttribute);
+
+            o.p.vertexNormalAttribute = gl.getAttribLocation(o.p, "aVertexNormal");
+            gl.enableVertexAttribArray(o.p.vertexNormalAttribute);
+
+            o.p.textureCoordAttribute = gl.getAttribLocation(o.p, "aTextureCoord");
+            gl.enableVertexAttribArray(o.p.textureCoordAttribute);
+
+            o.p.pMatrixUniform = gl.getUniformLocation(o.p, "uPMatrix");
+            o.p.mvMatrixUniform = gl.getUniformLocation(o.p, "uMVMatrix");
+            o.p.nMatrixUniform = gl.getUniformLocation(o.p, "uNMatrix");
+            o.p.samplerUniform = gl.getUniformLocation(o.p, "uSampler");
+            o.p.useLightingUniform = gl.getUniformLocation(o.p, "uUseLighting");
+            o.p.ambientColorUniform = gl.getUniformLocation(o.p, "uAmbientColor");
+            o.p.lightingDirectionUniform = gl.getUniformLocation(o.p, "uLightingDirection");
+            o.p.directionalColorUniform = gl.getUniformLocation(o.p, "uDirectionalColor");
+
+            console.log('light ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
+                o.p.textureCoordAttribute + ' ');
+        }
+};
+
+PROGRAM.textureLight.prototype = {
+    draw:
+        function (buffer, texture, pmat, vmat, s) {
+            var o = this;
+            var gl = o.gl;
+
+            if (!texture.image.complete)
+                return;
+            switchPrograms(gl, o.p);
+
+            var shaderProgram = o.p;
+
+            /*console.log('attr ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
+                o.p.textureCoordAttribute + ' ');*/
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer[0]);
+            gl.vertexAttribPointer(o.p.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer[3]);
+            gl.vertexAttribPointer(o.p.vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer[1]);
+            gl.vertexAttribPointer(o.p.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture.tex);
+            gl.uniform1i(o.p.samplerUniform, 0);
+            var lighting = true;
+            gl.uniform1i(o.p.useLightingUniform, lighting);
+            if (lighting) {
+                gl.uniform3f(
+                    o.p.ambientColorUniform,
+                    1.0,
+                    1.0,
+                    1.0
+                );
+
+                var lightingDirection = [
+                    -0.5,
+                    0.0,
+                    -1.0
+                ];
+                var adjustedLD = vec3.create();
+                vec3.normalize(lightingDirection, adjustedLD);
+                vec3.scale(adjustedLD, -1);
+                gl.uniform3fv(o.p.lightingDirectionUniform, adjustedLD);
+
+                gl.uniform3f(
+                    o.p.directionalColorUniform,
+                    0.5,
+                    0.5,
+                    0.5
+                );
+            }
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer[2]);
+
+            gl.uniformMatrix4fv(o.p.pMatrixUniform, false, pmat);
+            gl.uniformMatrix4fv(o.p.mvMatrixUniform, false, vmat);
+
+            var normalMatrix = mat3.create();
+            mat4.toInverseMat3(vmat, normalMatrix);
+            mat3.transpose(normalMatrix);
+            gl.uniformMatrix3fv(o.p.nMatrixUniform, false, normalMatrix);
+
+            gl.drawElements(gl.TRIANGLES, buffer[2].numItems, gl.UNSIGNED_SHORT, 0);
         }
 };
 
 PROGRAM.texture.prototype = {
     draw:
-        function (buffer, texture, pmat, vmat)
+        function (buffer, texture, pmat, vmat, pos)
         {
             var o = this;
             var gl = o.gl;
 
             if (!texture.image.complete)
                 return;
-            //switchPrograms(gl, o.p);
+            switchPrograms(gl, o.p);
+
+            var tm = mat4.create(vmat);
+
+            if (pos != undefined)
+                mat4.translate(tm, pos);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer[0]);
             gl.vertexAttribPointer(o.p.aVP, 3, gl.FLOAT, false, 0, 0);
@@ -166,7 +291,7 @@ PROGRAM.texture.prototype = {
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer[2]);
 
             gl.uniformMatrix4fv(o.p.uPM, false, pmat);
-            gl.uniformMatrix4fv(o.p.uMV, false, vmat);
+            gl.uniformMatrix4fv(o.p.uMV, false, tm);
 
             gl.drawElements(gl.TRIANGLES, buffer[2].numItems, gl.UNSIGNED_SHORT, 0);
         }
@@ -178,11 +303,18 @@ var TEXTURE = function (gl, src) {
     o.tex = gl.createTexture();
     o.image = new Image();
     o.image.onload = function () {
-        gl.bindTexture(gl.TEXTURE_2D, o.tex);
+        /*gl.bindTexture(gl.TEXTURE_2D, o.tex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, o.image);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.bindTexture(gl.TEXTURE_2D, null);*/
+
+        gl.bindTexture(gl.TEXTURE_2D, o.tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, o.image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, null);
     };
 
@@ -301,10 +433,12 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
     o.size = s;
     o.texture = new TEXTURE(gl, tex);
 
-    o.bv = null;
-    o.bt = null;
-    o.bn = null;
-    o.bi = null;
+    o.bv = [];
+    o.bt = [];
+    o.bn = [];
+    o.bi = [];
+
+    o.nb = 0;
 
     o.ok = false;
 
@@ -313,6 +447,8 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
         canvasHG = document.getElementById('heightmap');
         ctxHG = canvasHG.getContext('2d');
     }
+
+    o.data = null;
 
     o.img = new Image();
     o.img.onload = function () {
@@ -326,30 +462,143 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
 
         var data = ctxHG.getImageData(0, 0, o.img.width, o.img.height);
 
-        console.log(o.img.width + ' ' + o.img.height + ' ' + data.data.length);
+        data.p = function (xxx, yyy) {
+            return data.data[(xxx * w + yyy) * 4];
+        };
+
+        o.data = data;
+
+        //console.log(o.img.width + ' ' + o.img.height + ' ' + data.data.length);
 
         var v = [];
         var t = [];
+        var n = [];
         var id = [];
         var k = 0;
         var kk = 0;
 
-        for (var i = 0; i < w - 1; i++)
-        {
-            for (var j = 0; j < h - 1; j++)
-            {
-                
-                v.push(i); v.push(data.data[(i * w + j) * 4]); v.push(j);
-                v.push(i); v.push(data.data[(i * w + j) * 4 + 4]); v.push(j + 1);
-                v.push(i + 1); v.push(data.data[((i + 1) * w + j) * 4]); v.push(j);
+        o.nb++;
 
-                v.push(i); v.push(data.data[(i * w + j) * 4 + 4]); v.push(j + 1);
-                v.push(i + 1); v.push(data.data[((i + 1) * w + j) * 4 + 4]); v.push(j + 1);
-                v.push(i + 1); v.push(data.data[((i + 1) * w + j) * 4]); v.push(j);
+        var ddw = parseInt(w / 100) + 1;
+        var ddh = parseInt(h / 100) + 1;
+
+        var dw = 1.0 / w;
+        var dh = 1.0 / h;
+
+        console.log('dim : ' + w + ' ' + h + ' ' + ddw + ' ' + ddh);
+
+        function normal(i, j, ni, nj, data)
+        {
+            var v1 = [i, data.p(i, j - nj), j - nj];
+            var v2 = [i + ni, data.p(i + ni, j), j];
+            var v3 = [i, data.p(i, j + nj), j + nj];
+            var v4 = [i - ni, data.p(i - ni, j), j];
+
+            var c1 = [0, 0, 0];
+            var c2 = [0, 0, 0];
+            var c3 = [0, 0, 0];
+            var c4 = [0, 0, 0];
+
+            vec3.cross(v1, v2, c1);
+            vec3.cross(v2, v3, c2);
+            vec3.cross(v3, v4, c3);
+            vec3.cross(v4, v1, c4);
+
+            var n = [0, 0, 0];
+
+            vec3.add(n, c1);
+            vec3.add(n, c2);
+            vec3.add(n, c3);
+            vec3.add(n, c4);
+
+            vec3.normalize(n);
+
+            return n;
+        }
+
+        for (var i = ddw; i < w - 2 - ddw; i += ddw)
+        {
+            for (var j = ddh; j < h - 2 - ddh; j+=ddh)
+            {        
+                v.push(i); v.push(data.p(i,j)); v.push(j);
+                v.push(i); v.push(data.p(i, j + ddh)); v.push(j + ddh);
+                v.push(i + ddw); v.push(data.p(i + ddw, j)); v.push(j);
+
+                v.push(i); v.push(data.p(i, j + ddh)); v.push(j + ddh);
+                v.push(i + ddw); v.push(data.p(i + ddw, j + ddh)); v.push(j + ddh);
+                v.push(i + ddw); v.push(data.p(i + ddw, j)); v.push(j);
+
+                var vec = [0, 0, 0];
+
+                u = i;
+                f = j;
+                vec3.cross(
+                    [0, data.p(u, f + ddh) - data.p(u, f - ddh), ddh],
+                    [ddw, data.p(u + ddw, f) - data.p(u - ddw, f), 0],
+                    vec);
+                vec3.normalize(vec);
+                vec = normal(u, f, ddw, ddh, data);
+                n.push(vec[0]); n.push(vec[1]); n.push(vec[2]);
+
+                u = i;
+                f = j + 1;
+                vec3.cross(
+                    [0, data.p(u, f + ddh) - data.p(u, f - ddh), ddh],
+                    [ddw, data.p(u + ddw, f) - data.p(u - ddw, f), 0],
+                    vec);
+                vec3.normalize(vec);
+                vec = normal(u, f, ddw, ddh, data);
+                n.push(vec[0]); n.push(vec[1]); n.push(vec[2]);
+
+                u = i + 1;
+                f = j;
+                vec3.cross(
+                    [0, data.p(u, f + ddh) - data.p(u, f - ddh), ddh],
+                    [ddw, data.p(u + ddw, f) - data.p(u - ddw, f), 0],
+                    vec);
+                vec3.normalize(vec);
+                vec = normal(u, f, ddw, ddh, data);
+                n.push(vec[0]); n.push(vec[1]); n.push(vec[2]);
+
+                u = i;
+                f = j + 1;
+                vec3.cross(
+                    [0, data.p(u, f + ddh) - data.p(u, f - ddh), ddh],
+                    [ddw, data.p(u + ddw, f) - data.p(u - ddw, f), 0],
+                    vec);
+                vec3.normalize(vec);
+                vec = normal(u, f, ddw, ddh, data);
+                n.push(vec[0]); n.push(vec[1]); n.push(vec[2]);
+
+                u = i + 1;
+                f = j + 1;
+                vec3.cross(
+                    [0, data.p(u, f + ddh) - data.p(u, f - ddh), ddh],
+                    [ddw, data.p(u + ddw, f) - data.p(u - ddw, f), 0],
+                    vec);
+                vec3.normalize(vec);
+                vec = normal(u, f, ddw, ddh, data);
+                n.push(vec[0]); n.push(vec[1]); n.push(vec[2]);
+
+                u = i + 1;
+                f = j;
+                vec3.cross(
+                    [0, data.p(u, f + ddh) - data.p(u, f - ddh), ddh],
+                    [ddw, data.p(u + ddw, f) - data.p(u - ddw, f), 0],
+                    vec);
+                vec3.normalize(vec);
+                vec = normal(u, f, ddw, ddh, data);
+                n.push(vec[0]); n.push(vec[1]); n.push(vec[2]);
 
                 if (un)
                 {
+                    t.push(i * dw); t.push(j * dh);
+                    t.push(i * dw); t.push((j + ddh) * dh);
+                    t.push((i + ddw) * dw); t.push(j * dh);
 
+                    t.push(i * dw); t.push((j + ddh) * dh);
+                    t.push((i + ddw) * dw); t.push((j + ddh) * dh);
+                    t.push((i + ddw) * dw); t.push(j * dh);
                 }
                 else
                 {
@@ -374,9 +623,18 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
         }
 
         console.log('kk ' + kk);
-        o.bv = new BUFFER(gl, v, 3, false);
+        /*o.bv = new BUFFER(gl, v, 3, false);
         o.bt = new BUFFER(gl, t, 2, false);
-        o.bi = new BUFFER(gl, id, 1, true);
+        o.bn = new BUFFER(gl, n, 3, false);
+        o.bi = new BUFFER(gl, id, 1, true);*/
+        o.bv.push(new BUFFER(gl, v, 3, false));
+        o.bt.push(new BUFFER(gl, t, 2, false));
+        o.bn.push(new BUFFER(gl, n, 3, false));
+        o.bi.push(new BUFFER(gl, id, 1, true));
+
+        console.log((v.length / 3) + ' ' + (t.length / 2) + ' ' + id.length);
+
+        o.ok = true;
     };
     o.img.src = src;
 };
@@ -385,11 +643,19 @@ HEIGHTMAP.prototype = {
     draw:
         function (pg, pm, vm, pos) {
             var o = this;
+
+            if (!o.ok)
+                return;
+
             var tm = mat4.create(vm);
 
             mat4.translate(tm, pos);
-            mat4.scale(tm, [o.size, o.size, o.size]);
-
-            pg.draw([o.bv.buffer, o.bt.buffer, o.bi.buffer], o.texture, pm, tm);
+            mat4.scale(tm, [o.size, 0.25, o.size]);
+            //console.log('aaaaa1');
+            for (var i = 0; i < o.nb; i++) {
+                //console.log(i);
+                pg.draw([o.bv[i].buffer, o.bt[i].buffer, o.bi[i].buffer, o.bn[i].buffer], o.texture, pm, tm);
+            }
+            //console.log('aaaaa2');
         }
 };
