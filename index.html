@@ -8,9 +8,14 @@
     <script src="js/glMatrix-0.9.5.min.js"></script>
     <script src="js/webgl-utils.js"></script>
 
+    <script src="js/Input.js"></script>
     <script src="js/WebGL.js"></script>
 
     <script src="js/Main.js"></script>
+
+    <style>
+        html, body { width: 100%; height: 100%; margin: 0; padding: 0;}
+    </style>
 </head>
 <body>
     <script id="vertex-shader" type="x-shader/x-vertex">
@@ -37,10 +42,7 @@
         }
     </script>
 
-
-    <canvas id="dessin" width="300" height="300">
-
-    </canvas>
     <canvas id="dessin2" width="300" height="300"></canvas>
+    <canvas id="heightmap" style="display:none;"></canvas>
 </body>
 </html>

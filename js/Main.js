@@ -1,6 +1,10 @@
 ﻿
 $(function () {
 
+    var cvs = document.getElementById('dessin2');
+    cvs.height = $(window).height();
+    cvs.width = $(window).width();
+
     var g = new GL('dessin2');
     var pt = new PROGRAM.texture(g.gl, 'vertex-shader', 'fragment-shader');
 
@@ -427,19 +431,111 @@ $(function () {
         12, 13, 14, 12, 14, 15, // Bottom face
         16, 17, 18, 16, 18, 19, // Right face
         20, 21, 22, 20, 22, 23  // Left face
-    ],1, true);
+    ], 1, true);
+
+    var tt = new TEXTURE(g.gl, 'images/bamboo.png');
+
+    var angley = 0;
+    var anglez = 0;
+    var px = 10, py = 0, pz = 0;
+    var tx = 0, ty = 0, tz = 0;
+    var x = 0, y = 0, z = 0;
+
+    var sky = new SKYBOX(g.gl, 300, 'images/sky.png');
+    var ter = new HEIGHTMAP(g.gl, 'images/minhg.png', 'images/sol.png', 1, false);
+
+    var position = [10, 10, 0];
+    var look = [0, 0, 0];
+    var rayon = 10;
+    var teta = 0;
+    var phi = 0;
 
     setInterval(function () {
         g.gl.viewport(0, 0, g.gl.viewportWidth, g.gl.viewportHeight);
         g.gl.clear(g.gl.COLOR_BUFFER_BIT | g.gl.DEPTH_BUFFER_BIT);
 
-        mat4.perspective(45, g.gl.viewportWidth / g.gl.viewportHeight, 0.1, 100.0, pMatrix);
+        mat4.perspective(45, g.gl.viewportWidth / g.gl.viewportHeight, 0.001, 1000.0, pMatrix);
 
         mat4.identity(mvMatrix);
 
-        mat4.translate(mvMatrix, [0.0, 0.0, -5.0]);
+        //mat4.translate(mvMatrix, [0.0, 0.0, -5.0]);
 
-        if (hehe.image.complete)
-            pt.draw([bv.buffer, bt.buffer, bi.buffer], hehe, pMatrix, mvMatrix);
+        if (M[1])
+        {
+            teta += (M.mx - M.x) * 0.005;
+            phi -= (M.my - M.y) * 0.005;
+
+            angley -= (M.mx - M.x) * 0.5;
+            anglez += (M.my - M.y) * 0.5;
+            M.x = M.mx;
+            M.y = M.my;
+
+            if (angley > 90)
+                angley = -90;
+            if (angley < -90)
+                angley = 90;
+        }
+
+        var pas = 1;
+
+        var vdir = [tx - px, 0, tz - pz];
+        vec3.normalize(vdir);
+
+        if (K[37]) { // gauche
+            angley += 1;
+
+            position[2] -= Math.sin(teta) * 1;
+            position[0] += Math.cos(teta) * 1;
+        }
+        if (K[38]) { // haut
+            px += vdir[0];
+            pz += vdir[2];
+
+            position[2] += Math.cos(teta) * 1;
+            position[0] += Math.sin(teta) * 1;
+        }
+        if (K[39]) { // droite
+            angley -= 1;
+
+            position[2] += Math.sin(teta) * 1;
+            position[0] -= Math.cos(teta) * 1;
+        }
+        if (K[40]) { // bas
+            px -= vdir[0];
+            pz -= vdir[2];
+
+            position[2] -= Math.cos(teta) * 1;
+            position[0] -= Math.sin(teta) * 1;
+        }
+
+        var cx = Math.cos(angley * 3.14 / 180) *10;
+        var cy = Math.sin(angley * 3.14 / 180) * 10;
+        var cz = 0;
+
+        z = 10 * Math.cos(angley * 3.14 / 180.0);
+        y = 10 * Math.cos(angley * 3.14 / 180) * Math.sin(anglez * 3.14 / 180.0);
+        x = 10 * Math.cos(angley * 3.14 / 180) * Math.cos(anglez * 3.14 / 180.0);
+
+        //console.log(x + ' ' + y + ' ' + z + ' ' + angley + ' ' + anglez);
+
+        tx = px + cy;
+        tz = pz + cx;
+
+        //mat4.lookAt([px, py, pz], [tx, ty, tz], [0, 0, 1], mvMatrix);
+
+        look[0] = position[0] + Math.sin(teta) * rayon;
+        look[1] = position[1] + Math.sin(phi) * rayon;
+        look[2] = position[2] + Math.cos(teta) * rayon;
+
+        mat4.lookAt(position, look, [0, 1, 0], mvMatrix);
+       // mat4.translate(mvMatrix, [-x, -y, -z]);
+
+        //mat4.rotate(mvMatrix, angley, [0, 1, 0]);
+        //mat4.rotate(mvMatrix, anglez, [0, 0, 1]);
+
+        pt.draw([bv.buffer, bt.buffer, bi.buffer], tt, pMatrix, mvMatrix);
+
+        sky.draw(pt, pMatrix, mvMatrix, [-150, 0, -150]);
+        ter.draw(pt, pMatrix, mvMatrix, [-100, 0, -100]);
     }, 100);
 });
