@@ -8,6 +8,7 @@ $(function () {
     var g = new GL('dessin2');
     var pt = new PROGRAM.texture(g.gl, 'vertex-shader', 'fragment-shader');
     var ptl = new PROGRAM.textureLight(g.gl, 'vertex-shader-light', 'fragment-shader-light');
+    var ptm = new PROGRAM.mer(g.gl, 'vertex-shader-mer', 'fragment-shader-mer');
 
     var mvMatrix = mat4.create();
     var mvMatrixStack = [];
@@ -130,9 +131,10 @@ $(function () {
     var px = 10, py = 0, pz = 0;
     var tx = 0, ty = 0, tz = 0;
     var x = 0, y = 0, z = 0;
-
+    var tty = 0.0;
     var sky = new SKYBOX(g.gl, 300, 'images/sky.png');
-    var ter = new HEIGHTMAP(g.gl, 'images/hg.jpg', 'images/hgt.jpg', 1, true, 256, 256);
+    var ter = new HEIGHTMAP(g.gl, 'images/h4.png', 'images/g1.jpg', 1, false, 256, 256);
+    var mer = new MER(g.gl, [0, -10, 0], new TEXTURE(g.gl, 'images/t3.png'), tty);
 
     var position = [10, 1, 0];
     var look = [0, 0, 0];
@@ -140,12 +142,13 @@ $(function () {
     var teta = 0;
     var phi = 0;
 
-    var _forward = { X: 0, Y: 0, Z: 0 };
+    var _forward = [0, 0, 0];
     var _left = [0, 0, 0];
 
     var stack = [];
 
     setInterval(function () {
+        look[1] = 1;
         g.gl.viewport(0, 0, g.gl.viewportWidth, g.gl.viewportHeight);
         g.gl.clear(g.gl.COLOR_BUFFER_BIT | g.gl.DEPTH_BUFFER_BIT);
 
@@ -160,125 +163,65 @@ $(function () {
             teta += (M.mx - M.x) * 0.5;
             phi += (M.my - M.y) * 0.5;
 
-            angley -= (M.mx - M.x) * 0.5;
-            anglez += (M.my - M.y) * 0.5;
-            /*M.x = M.mx;
-            M.y = M.my;
-
-            if (angley > 90)
-                angley = -90;
-            if (angley < -90)
-                angley = 90;*/
-
-            anglez += (M.mx - M.x) * 0.005;
-            //mouvement sur X de la souris -> changement de la rotation horizontale
-            angley -= (M.my - M.y) * 0.005;
-            //mouvement sur Y de la souris -> changement de la rotation verticale
-            //pour éviter certains problèmes, on limite la rotation verticale à des angles entre -90° et 90°
-            if (angley > 90)
-                angley = 90;
-            else if (angley < -90)
-                angley = -90;
+            if (phi > 89)
+                phi = 89;
+            else if (phi < -89)
+                phi = -89;
 
             M.x = M.mx;
             M.y = M.my;
         }
 
-        var pas = 1;
-
-        var vdir = [tx - px, 0, tz - pz];
-        vec3.normalize(vdir);
+        var ppp = 2;
 
         if (K[37]) { // gauche
-            angley += 1;
-
-            /*position[2] -= Math.sin(teta) * 1;
-            position[0] += Math.cos(teta) * 1;*/
-
-            look[0] -= _left[0];
-            look[2] -= _left[2];
+            look[0] -= _left[0] * ppp;
+            look[2] -= _left[2] * ppp;
         }
         if (K[38]) { // haut
-            px += vdir[0];
-            pz += vdir[2];
-
-            /*position[2] += Math.cos(teta) * 1;
-            position[0] += Math.sin(teta) * 1;*/
-
-            look[0] -= _forward.X;
-            look[2] -= _forward.Y;
+            look[0] -= _forward[0] * ppp;
+            look[2] -= _forward[2] * ppp;
         }
         if (K[39]) { // droite
-            angley -= 1;
-
-            /*position[2] += Math.sin(teta) * 1;
-            position[0] -= Math.cos(teta) * 1;*/
-
-            look[0] += _left[0];
-            look[2] += _left[2];
+            look[0] += _left[0] * ppp;
+            look[2] += _left[2] * ppp;
         }
         if (K[40]) { // bas
-            px -= vdir[0];
-            pz -= vdir[2];
-
-            /*position[2] -= Math.cos(teta) * 1;
-            position[0] -= Math.sin(teta) * 1;*/
-
-            look[0] += _forward.X;
-            look[2] += _forward.Y;
+            look[0] += _forward[0] * ppp;
+            look[2] += _forward[2] * ppp;
         }
-
-        z = 10 * Math.cos(angley * 3.14 / 180.0);
-        y = 10 * Math.cos(angley * 3.14 / 180) * Math.sin(anglez * 3.14 / 180.0);
-        x = 10 * Math.cos(angley * 3.14 / 180) * Math.cos(anglez * 3.14 / 180.0);
-
-        //console.log(position);
-        //console.log(look);
-
-        /*if (phi > 89)
-            phi = 89;
-        else if (phi < -89)
-            phi = -89;*/
 
         
         //passage des coordonnées sphériques aux coordonnées cartésiennes
         var r_temp = Math.cos(phi*3.14/180);
-        _forward.Z = Math.sin(phi*3.14/180);
-        _forward.X = r_temp*Math.cos(teta*3.14/180);
-        _forward.Y = r_temp*Math.sin(teta*3.14/180);
-        //diantre mais que fait ce passage ?
+        _forward[1] = Math.sin(phi*3.14/180); // z
+        _forward[0] = r_temp*Math.cos(teta*3.14/180); // x
+        _forward[2] = r_temp*Math.sin(teta*3.14/180); // y
         
-        vec3.cross([0.0,1.0,0.0], [_forward.X, _forward.Y, _forward.Z], _left);
+        vec3.cross([0.0,1.0,0.0], [_forward[0], _forward[1], _forward[2]], _left);
         vec3.normalize(_left);
 
-        //avec la position de la caméra et la direction du regard, on calcule facilement ce que regarde la caméra (la cible)
-        //_target = _position + _forward;
-        position[0] = look[0] + _forward.X * 10;
-        position[1] = look[1] + _forward.Z * 10;
-        position[2] = look[2] + _forward.Y * 10;
+        position[0] = look[0] + _forward[0] * 10;
+        position[1] = look[1] + _forward[1] * 10;
+        position[2] = look[2] + _forward[2] * 10;
 
         /*console.log(position);
         console.log(look);
         console.log(_left);
-        console.log(phi + '  ' + teta);*/
+        console.log(phi + '  ' + teta);
+        console.log(' --- ');*/
 
         mat4.lookAt(position, look, [0, 1, 0], mvMatrix);
 
-        /*mat4.rotate(mvMatrix, angley, [0, 0, 1]);
-        mat4.rotate(mvMatrix, anglez, [0, 1, 0]);*/
-
-        /*look[0] = position[0] + Math.sin(teta) * rayon;
-        look[1] = position[1] + Math.sin(phi) * rayon;
-        look[2] = position[2] + Math.cos(teta) * rayon;
-
-        mat4.lookAt(position, look, [0, 1, 0], mvMatrix);*/
-        
-        //stack.push(mat4.create(mvMatrix));
-        
         pt.draw([bv.buffer, bt.buffer, bi.buffer], tt, pMatrix, mvMatrix, look);
-
         sky.draw(pt, pMatrix, mvMatrix, [-150, 0, -150]);
-        
-        ter.draw(ptl, pMatrix, mvMatrix, [-150, -125, -150]);
+        ter.draw(ptl, pMatrix, mvMatrix, [0, -20, 0]);
+
+
+        mer.draw(ptm, pMatrix, mvMatrix);
+
+        tty += 0.5;
+
+        mer = new MER(g.gl, [0, -11, 0], new TEXTURE(g.gl, 'images/t3.png'), tty);
     }, 100);
 });

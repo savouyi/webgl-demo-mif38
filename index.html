@@ -22,10 +22,25 @@
     <script src="js/Main.js"></script>
 
     <style>
-        html, body { width: 100%; height: 100%; margin: 0; padding: 0;}
+        html, body { 
+            width: 100%; height: 100%; margin: 0; padding: 0; 
+            font-family: Calibri; font-size: 12px;
+        }
+        #camera { position: absolute; top: 10px; left: 10px; }
+        #p {
+                position: absolute; font-weight: bold;
+                top: 1px;
+                left: 33px;
+                width: 60px;
+            }
     </style>
 </head>
 <body>
+    <div id="camera">
+        <input type="checkbox" /> 
+    </div>
+    <p id="p">Mode FPS</p>
+
     <script id="vertex-shader" type="x-shader/x-vertex">
         attribute vec3 aVP;
         attribute vec2 aTC;
@@ -94,6 +109,63 @@
         float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
         vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
         }
+        }
+    </script>
+
+    <script id="fragment-shader-mer" type="x-shader/x-fragment">
+        precision mediump float;
+
+        varying vec2 vTextureCoord;
+        varying vec3 vLightWeighting;
+
+        uniform sampler2D uSampler;
+
+        void main(void) {
+        vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
+        }
+    </script>
+
+    <script id="vertex-shader-mer" type="x-shader/x-vertex">
+        attribute vec3 aVertexPosition;
+        attribute vec3 aVertexNormal;
+        attribute vec2 aTextureCoord;
+
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+        uniform mat3 uNMatrix;
+
+        uniform vec3 uAmbientColor;
+
+        uniform vec3 v1;
+        uniform vec3 v2;
+        uniform vec3 v3;
+
+        uniform vec3 uLightingDirection;
+        uniform vec3 uDirectionalColor;
+
+        uniform int uUseLighting;
+
+        varying vec2 vTextureCoord;
+        varying vec3 vLightWeighting;
+
+        float rand(vec2 co){
+            return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+        }
+
+        void main(void) {
+        //float r = rand(vec2(aVertexPosition.x, aVertexPosition.z));
+        //vec3 pos = vec3(aVertexPosition.x, aVertexPosition.y + sin(aVertexPosition.x + aVertexPosition.z + r) * 2.0, aVertexPosition.z);
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vTextureCoord = aTextureCoord;
+
+        /*if (!uUseLighting) {
+        vLightWeighting = vec3(1.0, 1.0, 1.0);
+        } else {*/
+        vec3 transformedNormal = uNMatrix * aVertexNormal;
+        float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
+        vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
+        /*}*/
         }
     </script>
 

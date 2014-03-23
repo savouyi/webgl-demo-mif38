@@ -190,6 +190,56 @@ var PROGRAM = {
 
             console.log('light ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
                 o.p.textureCoordAttribute + ' ');
+        },
+
+    mer:
+        function (gl, id_vertex, id_fragment) {
+            var o = this;
+            var s = new SHADER(gl, id_vertex, id_fragment);
+
+            o.gl = gl;
+
+
+            o.p = gl.createProgram();
+            o.p.nom = 'texture light';
+            var shaderProgram = o.p;
+
+            gl.attachShader(o.p, s.sv);
+            gl.attachShader(o.p, s.sf);
+            gl.linkProgram(o.p);
+
+            if (!gl.getProgramParameter(o.p, gl.LINK_STATUS)) {
+                alert("Could not initialise shaders");
+            }
+
+            //gl.useProgram(shaderProgram);
+            switchPrograms(gl, o.p);
+
+            o.p.vertexPositionAttribute = gl.getAttribLocation(o.p, "aVertexPosition");
+            gl.enableVertexAttribArray(o.p.vertexPositionAttribute);
+
+            o.p.vertexNormalAttribute = gl.getAttribLocation(o.p, "aVertexNormal");
+            gl.enableVertexAttribArray(o.p.vertexNormalAttribute);
+
+            o.p.textureCoordAttribute = gl.getAttribLocation(o.p, "aTextureCoord");
+            gl.enableVertexAttribArray(o.p.textureCoordAttribute);
+
+            o.p.v1 = gl.getUniformLocation(o.p, "v1");
+            o.p.v2 = gl.getUniformLocation(o.p, "v2");
+            o.p.v4 = gl.getUniformLocation(o.p, "v3");
+            o.p.v3 = gl.getUniformLocation(o.p, "v4");
+
+            o.p.pMatrixUniform = gl.getUniformLocation(o.p, "uPMatrix");
+            o.p.mvMatrixUniform = gl.getUniformLocation(o.p, "uMVMatrix");
+            o.p.nMatrixUniform = gl.getUniformLocation(o.p, "uNMatrix");
+            o.p.samplerUniform = gl.getUniformLocation(o.p, "uSampler");
+            o.p.useLightingUniform = gl.getUniformLocation(o.p, "uUseLighting");
+            o.p.ambientColorUniform = gl.getUniformLocation(o.p, "uAmbientColor");
+            o.p.lightingDirectionUniform = gl.getUniformLocation(o.p, "uLightingDirection");
+            o.p.directionalColorUniform = gl.getUniformLocation(o.p, "uDirectionalColor");
+
+            console.log('light ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
+                o.p.textureCoordAttribute + ' ');
         }
 };
 
@@ -222,7 +272,7 @@ PROGRAM.textureLight.prototype = {
             gl.uniform1i(o.p.samplerUniform, 0);
             var lighting = true;
             gl.uniform1i(o.p.useLightingUniform, lighting);
-            if (lighting) {
+            //if (lighting) {
                 gl.uniform3f(
                     o.p.ambientColorUniform,
                     1.0,
@@ -246,7 +296,76 @@ PROGRAM.textureLight.prototype = {
                     0.5,
                     0.5
                 );
-            }
+            //}
+
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer[2]);
+
+            gl.uniformMatrix4fv(o.p.pMatrixUniform, false, pmat);
+            gl.uniformMatrix4fv(o.p.mvMatrixUniform, false, vmat);
+
+            var normalMatrix = mat3.create();
+            mat4.toInverseMat3(vmat, normalMatrix);
+            mat3.transpose(normalMatrix);
+            gl.uniformMatrix3fv(o.p.nMatrixUniform, false, normalMatrix);
+
+            gl.drawElements(gl.TRIANGLES, buffer[2].numItems, gl.UNSIGNED_SHORT, 0);
+        }
+};
+
+PROGRAM.mer.prototype = {
+    draw:
+        function (buffer, texture, pmat, vmat, s) {
+            var o = this;
+            var gl = o.gl;
+
+            if (!texture.image.complete)
+                return;
+            switchPrograms(gl, o.p);
+
+            var shaderProgram = o.p;
+
+            /*console.log('attr ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
+                o.p.textureCoordAttribute + ' ');*/
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer[0]);
+            gl.vertexAttribPointer(o.p.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer[3]);
+            gl.vertexAttribPointer(o.p.vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer[1]);
+            gl.vertexAttribPointer(o.p.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, texture.tex);
+            gl.uniform1i(o.p.samplerUniform, 0);
+            var lighting = true;
+            gl.uniform1i(o.p.useLightingUniform, lighting);
+            //if (lighting) {
+            gl.uniform3f(
+                o.p.ambientColorUniform,
+                1.0,
+                1.0,
+                1.0
+            );
+
+            var lightingDirection = [
+                -0.5,
+                0.0,
+                -1.0
+            ];
+            var adjustedLD = vec3.create();
+            vec3.normalize(lightingDirection, adjustedLD);
+            vec3.scale(adjustedLD, -1);
+            gl.uniform3fv(o.p.lightingDirectionUniform, adjustedLD);
+
+            gl.uniform3f(
+                o.p.directionalColorUniform,
+                0.5,
+                0.5,
+                0.5
+            );
+            //}
 
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer[2]);
 
@@ -366,22 +485,22 @@ var SKYBOX = function (gl, s, src) {
 
     o.bt = new BUFFER(gl, [
       // Front face
-      q, t,
-      2 * q, t,
-      2 * q, 0.0,
-      q, 0.0,
-
-      // Back face
       q, 2 * t,
       2 * q, 2 * t,
-      2 * q, 1.0,
-      q, 1.0,
+      2 * q, 3 * t,
+      q, 3 * t,
+
+      // Back face
+      1.0, 2 * t,
+      1.0, t,
+      3 * q, t,
+      3 * q, 2 * t,
 
       // Top face
-      3 * q, 1.0,
-      t, 0.0,
-      2 * t, 0.0,
-      3 * q, 1.0,
+      q, 0.0,
+      2 * q, 0.0,
+      2 * q, t,
+      q, t,
 
       // Bottom face
       1.0, 1.0,
@@ -390,10 +509,10 @@ var SKYBOX = function (gl, s, src) {
       1.0, 0.0,
 
       // Right face
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
+      3 * q, t,
+      3 * q, 2 * t,
+      2 * q, 2 * t,
+      2 * q, t,
 
       // Left face
       0.0, t,
@@ -657,5 +776,172 @@ HEIGHTMAP.prototype = {
                 pg.draw([o.bv[i].buffer, o.bt[i].buffer, o.bi[i].buffer, o.bn[i].buffer], o.texture, pm, tm);
             }
             //console.log('aaaaa2');
+        },
+
+    xyh:
+        function (xx, yy) {
+            var o = this;
+
+            if (o.data == null)
+                return 0;
+
+            var x = xx;
+            var y = yy;
+            var ix = parseInt(x);
+            var iy = parseInt(y);
+            var dx = x - ix;
+            var dy = y - iy;
+            var hauteursol = ((1 - dx) * o.data.p(ix, iy) + dx * o.data.p(ix + 1, iy)) * (1 - dy)
+                                  + ((1 - dx) * o.data.p(ix, iy + 1) + dx * o.data.p(ix + 1, iy + 1)) * dy;
+            return hauteursol * 0.25;
+        }
+};
+
+var MER = function (gl, pos, tex, decc) {
+    var o = this;
+
+    o.bv = null;
+    o.bt = null;
+    o.bn = null;
+    o.bi = null;
+
+    o.texture = tex;
+
+    o.pos = pos;
+
+    var v = [], vv = new Float32Array(100 * 100 * 3),t = [], n = [], id = [], k = 0;
+    var h = 0.01;
+
+    function dv (i, j)
+    {
+        var dec = (i * 100 + j) * 3;
+        return [vv[dec], vv[dec + 1], vv[dec + 2]];
+    }
+
+    function sv(i, hh, j) {
+        var dec = (i * 100 + j) * 3;
+        vv[dec] = i;
+        vv[dec + 1] = hh;
+        vv[dec + 2] = j;
+    }
+
+    function mern (i, j)
+    {
+        var v1 = [i, 0, j - 1];
+        var v2 = [i + 1, 0, j];
+        var v3 = [i, 0, j + 1];
+        var v4 = [i - 1, 0, j];
+
+        var ij = dv(i, j);
+
+        if (i == 0)
+            v4 = ij;
+        if (i == 99)
+            v2 = ij;
+        if (j == 0)
+            v1 = ij;
+        if (j == 99)
+            v3 = ij;
+
+        v1 = dv( v1[0], v1[2]);
+        v2 = dv(v2[0], v2[2]);
+        v3 = dv(v3[0], v3[2]);
+        v4 = dv(v4[0], v4[2]);
+
+        var c1 = [0, 0, 0];
+        var c2 = [0, 0, 0];
+        var c3 = [0, 0, 0];
+        var c4 = [0, 0, 0];
+
+        vec3.cross(v1, v2, c1);
+        vec3.cross(v2, v3, c2);
+        vec3.cross(v3, v4, c3);
+        vec3.cross(v4, v1, c4);
+
+        var n = [0, 0, 0];
+
+        vec3.add(n, c1);
+        vec3.add(n, c2);
+        vec3.add(n, c3);
+        vec3.add(n, c4);
+
+        vec3.normalize(n);
+
+        return n;
+    }
+
+    for (var i = 0; i < 100; i++)
+    {
+        for (var j = 0; j < 100; j++)
+        {
+            v.push(i); v.push(Math.sin(decc + i + j) * h + Math.cos(decc + i)); v.push(j);
+            v.push(i); v.push(Math.sin(decc + i + (j + 1)) * h + Math.cos(decc + i)); v.push(j + 1);
+            v.push(i + 1); v.push(Math.sin(decc + (i + 1) + (j + 1)) * h + Math.cos(decc + i + 1)); v.push(j + 1);
+
+            v.push(i + 1); v.push(Math.sin(decc + (i + 1) + (j + 1)) * h + Math.cos(decc + i + 1)); v.push(j + 1);
+            v.push(i + 1); v.push(Math.sin(decc + (i + 1) + j) * h + Math.cos(decc + i + 1)); v.push(j);
+            v.push(i); v.push(Math.sin(decc + i + j) * h + Math.cos(decc + i)); v.push(j);
+
+            sv(i, Math.sin(i + j) * h, j);
+            sv(i, Math.sin(i + (j + 1)) * h, j + 1);
+            sv(i + 1, Math.sin((i + 1) + (j + 1)) * h, j + 1);
+
+            sv(i + 1, Math.sin((i + 1) + (j + 1)) * h, j + 1);
+            sv((i + 1), Math.sin((i + 1) + j) * h, j);
+            sv(i, Math.sin(i + j) * h, j);
+
+            t.push(1.0); t.push(1.0);
+            t.push(0.0); t.push(1.0);
+            t.push(0.0); t.push(0.0);
+
+            t.push(0.0); t.push(0.0);
+            t.push(1.0); t.push(0.0);
+            t.push(1.0); t.push(1.0);
+
+            for (var l = 0; l < 6; l++)
+            {
+                id.push(k);
+                k++;
+            }
+        }
+    }
+
+    for (var i = 0; i < 100; i++) {
+        for (var j = 0; j < 100; j++) {
+            var nn = mern(i, j, v);
+            n.push(nn[0]); n.push(nn[1]); n.push(nn[2]);
+            nn = mern(i, j + 1, v);
+            n.push(nn[0]); n.push(nn[1]); n.push(nn[2]);
+            nn = mern(i + 1, j + 1, v);
+            n.push(nn[0]); n.push(nn[1]); n.push(nn[2]);
+
+            nn = mern(i + 1, j + 1, v);
+            n.push(nn[0]); n.push(nn[1]); n.push(nn[2]);
+            nn = mern(i + 1, j, v);
+            n.push(nn[0]); n.push(nn[1]); n.push(nn[2]);
+            nn = mern(i, j, v);
+            n.push(nn[0]); n.push(nn[1]); n.push(nn[2]);
+        }
+    }
+
+    o.bv = new BUFFER(gl, v, 3, false);
+    o.bt = new BUFFER(gl, t, 2, false);
+    o.bn = new BUFFER(gl, n, 3, false);
+    o.bi = new BUFFER(gl, id, 1, true);
+};
+
+
+MER.prototype = {
+    draw:
+        function (pg, pm, vm) {
+            var o = this;
+
+            
+
+            var tm = mat4.create(vm);
+
+            mat4.translate(tm, o.pos);
+
+            pg.draw([o.bv.buffer, o.bt.buffer, o.bi.buffer, o.bn.buffer], o.texture, pm, tm);
         }
 };
