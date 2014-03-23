@@ -243,6 +243,8 @@ var PROGRAM = {
         }
 };
 
+var ll = 0;
+
 PROGRAM.textureLight.prototype = {
     draw:
         function (buffer, texture, pmat, vmat, s) {
@@ -270,7 +272,9 @@ PROGRAM.textureLight.prototype = {
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, texture.tex);
             gl.uniform1i(o.p.samplerUniform, 0);
-            var lighting = true;
+            
+            var lighting = ll + 1;
+            ll+=100;
             gl.uniform1i(o.p.useLightingUniform, lighting);
             //if (lighting) {
                 gl.uniform3f(
@@ -339,7 +343,8 @@ PROGRAM.mer.prototype = {
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, texture.tex);
             gl.uniform1i(o.p.samplerUniform, 0);
-            var lighting = true;
+            var lighting = ll + 1;
+            ll += 1;
             gl.uniform1i(o.p.useLightingUniform, lighting);
             //if (lighting) {
             gl.uniform3f(
@@ -874,13 +879,13 @@ var MER = function (gl, pos, tex, decc) {
     {
         for (var j = 0; j < 100; j++)
         {
-            v.push(i); v.push(Math.sin(decc + i + j) * h + Math.cos(decc + i)); v.push(j);
-            v.push(i); v.push(Math.sin(decc + i + (j + 1)) * h + Math.cos(decc + i)); v.push(j + 1);
-            v.push(i + 1); v.push(Math.sin(decc + (i + 1) + (j + 1)) * h + Math.cos(decc + i + 1)); v.push(j + 1);
+            v.push(i); v.push(0); v.push(j);
+            v.push(i); v.push(0); v.push(j + 1);
+            v.push(i + 1); v.push(0); v.push(j + 1);
 
-            v.push(i + 1); v.push(Math.sin(decc + (i + 1) + (j + 1)) * h + Math.cos(decc + i + 1)); v.push(j + 1);
-            v.push(i + 1); v.push(Math.sin(decc + (i + 1) + j) * h + Math.cos(decc + i + 1)); v.push(j);
-            v.push(i); v.push(Math.sin(decc + i + j) * h + Math.cos(decc + i)); v.push(j);
+            v.push(i + 1); v.push(0); v.push(j + 1);
+            v.push(i + 1); v.push(0); v.push(j);
+            v.push(i); v.push(0); v.push(j);
 
             sv(i, Math.sin(i + j) * h, j);
             sv(i, Math.sin(i + (j + 1)) * h, j + 1);

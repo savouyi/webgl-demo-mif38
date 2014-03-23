@@ -1,4 +1,14 @@
 ﻿
+$.ajax({
+    type: "GET",
+    url: "data/cube.html",
+    dataType: 'text'
+})
+        .done(function (msg) {
+            Parse.obj(msg);
+            //alert("Data Saved: " + msg);
+        });
+
 $(function () {
 
     var cvs = document.getElementById('dessin2');
@@ -222,6 +232,6 @@ $(function () {
 
         tty += 0.5;
 
-        mer = new MER(g.gl, [0, -11, 0], new TEXTURE(g.gl, 'images/t3.png'), tty);
+        //mer = new MER(g.gl, [0, -11, 0], new TEXTURE(g.gl, 'images/t3.png'), tty);
     }, 100);
 });

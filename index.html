@@ -10,11 +10,15 @@
                 this.pop();
             }
         };
+
+        
     </script>
 
     <script src="js/jquery-1.11.0.min.js"></script>
     <script src="js/glMatrix-0.9.5.min.js"></script>
     <script src="js/webgl-utils.js"></script>
+
+    <script src="js/Parser.js"></script>
 
     <script src="js/Input.js"></script>
     <script src="js/WebGL.js"></script>
@@ -118,11 +122,36 @@
         varying vec2 vTextureCoord;
         varying vec3 vLightWeighting;
 
+        varying vec3 normal, lightDir, eyeVec;
+
         uniform sampler2D uSampler;
 
         void main(void) {
         vec4 textureColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-        gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
+        //gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
+
+        vec4 final_color =  (textureColor * vec4(0.8,0.8,0.8,1.0)) +
+        (vec4(0.2,0.2,0.2,1.0) * vec4(0.2,0.2,0.2,1.0));
+
+        vec3 N = normalize(normal);
+        vec3 L = normalize(lightDir);
+
+        float lambertTerm = dot(N,L);
+
+        if(lambertTerm > 0.0)
+        {
+            final_color += vec4(0.5,0.5,0.5,1.0) *
+            vec4(1.0,1.0,1.0,1.0) *
+            lambertTerm;
+
+            vec3 E = normalize(eyeVec);
+            vec3 R = reflect(-L, N);
+            float specular = pow( max(dot(R, E), 0.0), 10.0);
+            final_color += vec4(0.8,0.8,0.8,1.0) *
+            vec4(0.8,0.8,0.8,1.0) * specular;
+        }
+
+        gl_FragColor = final_color;
         }
     </script>
 
@@ -149,14 +178,24 @@
         varying vec2 vTextureCoord;
         varying vec3 vLightWeighting;
 
+        varying vec3 normal, lightDir, eyeVec;
+
         float rand(vec2 co){
             return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
         }
 
         void main(void) {
-        //float r = rand(vec2(aVertexPosition.x, aVertexPosition.z));
-        //vec3 pos = vec3(aVertexPosition.x, aVertexPosition.y + sin(aVertexPosition.x + aVertexPosition.z + r) * 2.0, aVertexPosition.z);
-        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+
+        normal = uNMatrix * aVertexNormal;
+
+        vec4 vVertex = uMVMatrix * vec4(aVertexPosition, 1.0);
+
+        lightDir = vec3(vec3(100.0,-100.0,100.0) - vec3(vVertex.x,vVertex.y,vVertex.z));
+        eyeVec = vec3(-vVertex.x,-vVertex.y,-vVertex.z);
+
+        float r = rand(vec2(aVertexPosition.x, aVertexPosition.z));
+        vec3 pos = vec3(aVertexPosition.x, aVertexPosition.y + sin(float(uUseLighting) + r) * 0.2, aVertexPosition.z);
+        gl_Position = uPMatrix * uMVMatrix * vec4(pos, 1.0);
         vTextureCoord = aTextureCoord;
 
         /*if (!uUseLighting) {
