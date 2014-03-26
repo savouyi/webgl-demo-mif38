@@ -65,6 +65,8 @@ function switchPrograms(gl, newProgram) {
     //console.log(newProgram.nom);
 }
 
+// taille des element ex: points x,y,z - > 3
+// index = true pour index
 var BUFFER = function (gl, v, s, index) {
     var o = this;
     
@@ -226,11 +228,6 @@ var PROGRAM = {
             o.p.textureCoordAttribute = gl.getAttribLocation(o.p, "aTextureCoord");
             gl.enableVertexAttribArray(o.p.textureCoordAttribute);
 
-            o.p.v1 = gl.getUniformLocation(o.p, "v1");
-            o.p.v2 = gl.getUniformLocation(o.p, "v2");
-            o.p.v4 = gl.getUniformLocation(o.p, "v3");
-            o.p.v3 = gl.getUniformLocation(o.p, "v4");
-
             o.p.pMatrixUniform = gl.getUniformLocation(o.p, "uPMatrix");
             o.p.mvMatrixUniform = gl.getUniformLocation(o.p, "uMVMatrix");
             o.p.nMatrixUniform = gl.getUniformLocation(o.p, "uNMatrix");
@@ -239,9 +236,6 @@ var PROGRAM = {
             o.p.ambientColorUniform = gl.getUniformLocation(o.p, "uAmbientColor");
             o.p.lightingDirectionUniform = gl.getUniformLocation(o.p, "uLightingDirection");
             o.p.directionalColorUniform = gl.getUniformLocation(o.p, "uDirectionalColor");
-
-            console.log('light ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
-                o.p.textureCoordAttribute + ' ');
         }
 };
 
@@ -258,9 +252,6 @@ PROGRAM.textureLight.prototype = {
             switchPrograms(gl, o.p);
 
             var shaderProgram = o.p;
-
-            /*console.log('attr ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
-                o.p.textureCoordAttribute + ' ');*/
 
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer[0]);
             gl.vertexAttribPointer(o.p.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
@@ -320,18 +311,23 @@ PROGRAM.textureLight.prototype = {
 
 PROGRAM.mer.prototype = {
     draw:
-        function (buffer, texture, pmat, vmat, s) {
+        function (buffer, texture, pmat, vmat, pos, s) {
             var o = this;
             var gl = o.gl;
 
             if (!texture.image.complete)
                 return;
+
             switchPrograms(gl, o.p);
 
             var shaderProgram = o.p;
 
-            /*console.log('attr ' + o.p.vertexPositionAttribute + ' ' + o.p.vertexNormalAttribute + ' ' +
-                o.p.textureCoordAttribute + ' ');*/
+            var tm = mat4.create(vmat);
+
+            if (pos != undefined)
+                mat4.translate(tm, pos);
+            if (s != undefined)
+                mat4.scale(tm, s);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer[0]);
             gl.vertexAttribPointer(o.p.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
@@ -346,16 +342,6 @@ PROGRAM.mer.prototype = {
             gl.bindTexture(gl.TEXTURE_2D, texture.tex);
             gl.uniform1i(o.p.samplerUniform, 0);
 
-            var wavelength = [0,2,3,4,5,6,7];
-            var amplitude = [0,2,3,4,5,6,7];
-            var speed = [0,2,3,4,5,6,7];
-            var direction = [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]];
-
-            gl.uniform1f(gl.getUniformLocation(o.p, "wavelength"), 8, wavelength);
-            gl.uniform1f(gl.getUniformLocation(o.p, "amplitude"), 8, amplitude);
-            gl.uniform1f(gl.getUniformLocation(o.p, "speed"), 8, speed);
-            gl.uniform2f(gl.getUniformLocation(o.p, "direction"), 8, direction);
-
             var lighting = ll + 1;
             ll += 1;
             gl.uniform1i(o.p.useLightingUniform, lighting);
@@ -367,42 +353,48 @@ PROGRAM.mer.prototype = {
                 1.0
             );
 
-            var lightingDirection = [
-                -0.5,
-                0.0,
-                -1.0
+            var lightingDirection = [ -0.5, 0.0, -1.0
             ];
             var adjustedLD = vec3.create();
             vec3.normalize(lightingDirection, adjustedLD);
             vec3.scale(adjustedLD, -1);
             gl.uniform3fv(o.p.lightingDirectionUniform, adjustedLD);
 
-            gl.uniform3f(
-                o.p.directionalColorUniform,
-                0.5,
-                0.5,
-                0.5
-            );
-            //}
+            gl.uniform3f( o.p.directionalColorUniform, 0.5, 0.5, 0.5 );
 
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer[2]);
 
             gl.uniformMatrix4fv(o.p.pMatrixUniform, false, pmat);
-            gl.uniformMatrix4fv(o.p.mvMatrixUniform, false, vmat);
+            gl.uniformMatrix4fv(o.p.mvMatrixUniform, false, tm);
 
             var normalMatrix = mat3.create();
-            mat4.toInverseMat3(vmat, normalMatrix);
+            mat4.toInverseMat3(tm, normalMatrix);
             mat3.transpose(normalMatrix);
             gl.uniformMatrix3fv(o.p.nMatrixUniform, false, normalMatrix);
 
             gl.drawElements(gl.TRIANGLES, buffer[2].numItems, gl.UNSIGNED_SHORT, 0);
+        },
+
+    drawParsed:
+        function (buffer, texture, pmat, vmat, pos, s) {
+            if (buffer != undefined) {
+                for (var i = 0; i < buffer.nb; i++) {
+                    this.draw([buffer.bv[i].buffer, buffer.bt[i].buffer, buffer.bi[i].buffer, buffer.bn[i].buffer], texture, pmat, vmat, pos, s);
+                }
+            }
         }
 };
 
 PROGRAM.texture.prototype = {
     draw:
-        function (buffer, texture, pmat, vmat, pos)
+        function (buffer, texture, pmat, vmat, pos, scale, angle, axe)
         {
+            if (buffer == null)
+                return;
+
+            else if (buffer[0] == null)
+                return;
+
             var o = this;
             var gl = o.gl;
 
@@ -414,6 +406,10 @@ PROGRAM.texture.prototype = {
 
             if (pos != undefined)
                 mat4.translate(tm, pos);
+            if (scale != undefined)
+                mat4.scale(tm, scale);
+            if (angle != undefined)
+                mat4.rotate(tm, angle, axe);
 
             gl.bindBuffer(gl.ARRAY_BUFFER, buffer[0]);
             gl.vertexAttribPointer(o.p.aVP, 3, gl.FLOAT, false, 0, 0);
@@ -431,6 +427,15 @@ PROGRAM.texture.prototype = {
             gl.uniformMatrix4fv(o.p.uMV, false, tm);
 
             gl.drawElements(gl.TRIANGLES, buffer[2].numItems, gl.UNSIGNED_SHORT, 0);
+        },
+
+    drawParsed:
+        function (buffer, texture, pmat, vmat, pos, scale, angle, axe) {
+            if (buffer != undefined) {
+                for (var i = 0; i < buffer.nb; i++) {
+                    this.draw([buffer.bv[i].buffer, buffer.bt[i].buffer, buffer.bi[i].buffer], texture, pmat, vmat, pos, scale, angle, axe);
+                }
+            }
         }
 };
 
@@ -614,8 +619,6 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
         var k = 0;
         var kk = 0;
 
-        o.nb++;
-
         var ddw = parseInt(w / 100) + 1;
         var ddh = parseInt(h / 100) + 1;
 
@@ -653,9 +656,9 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
             return n;
         }
 
-        for (var i = ddw; i < w - 2 - ddw; i += ddw)
+        for (var i = 1; i < w - 2; i++)
         {
-            for (var j = ddh; j < h - 2 - ddh; j+=ddh)
+            for (var j = 1; j < h - 2; j++)
             {        
                 v.push(i); v.push(data.p(i,j)); v.push(j);
                 v.push(i); v.push(data.p(i, j + ddh)); v.push(j + ddh);
@@ -748,6 +751,21 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
                     t.push(0.0); t.push(0.0);
                 }
 
+                if (k > 65531) {
+                    o.bv.push(new BUFFER(gl, v, 3, false));
+                    o.bt.push(new BUFFER(gl, t, 2, false));
+                    o.bn.push(new BUFFER(gl, n, 3, false));
+                    o.bi.push(new BUFFER(gl, id, 1, true));
+
+                    k = 0;
+                    o.nb++;
+
+                    v.clear();
+                    t.clear();
+                    n.clear();
+                    id.clear();
+                }
+
                 for (var l = 0; l < 6; l++)
                 {
                     id.push(k);
@@ -759,15 +777,11 @@ var HEIGHTMAP = function (gl, src, tex, s, un) {
             
         }
 
-        console.log('kk ' + kk);
-        /*o.bv = new BUFFER(gl, v, 3, false);
-        o.bt = new BUFFER(gl, t, 2, false);
-        o.bn = new BUFFER(gl, n, 3, false);
-        o.bi = new BUFFER(gl, id, 1, true);*/
         o.bv.push(new BUFFER(gl, v, 3, false));
         o.bt.push(new BUFFER(gl, t, 2, false));
         o.bn.push(new BUFFER(gl, n, 3, false));
         o.bi.push(new BUFFER(gl, id, 1, true));
+        o.nb++;
 
         console.log((v.length / 3) + ' ' + (t.length / 2) + ' ' + id.length);
 

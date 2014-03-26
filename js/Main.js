@@ -1,13 +1,5 @@
 ﻿
-$.ajax({
-    type: "GET",
-    url: "data/cube.html",
-    dataType: 'text'
-})
-        .done(function (msg) {
-            Parse.obj(msg);
-            //alert("Data Saved: " + msg);
-        });
+
 
 $(function () {
 
@@ -24,117 +16,46 @@ $(function () {
     var mvMatrixStack = [];
     var pMatrix = mat4.create();
 
-    function handleLoadedTexture(texture) {
-        g.gl.bindTexture(g.gl.TEXTURE_2D, texture);
-        g.gl.pixelStorei(g.gl.UNPACK_FLIP_Y_WEBGL, true);
-        g.gl.texImage2D(g.gl.TEXTURE_2D, 0, g.gl.RGBA, g.gl.RGBA, g.gl.UNSIGNED_BYTE, texture.image);
-        g.gl.texParameteri(g.gl.TEXTURE_2D, g.gl.TEXTURE_MAG_FILTER, g.gl.NEAREST);
-        g.gl.texParameteri(g.gl.TEXTURE_2D, g.gl.TEXTURE_MIN_FILTER, g.gl.NEAREST);
-        g.gl.bindTexture(g.gl.TEXTURE_2D, null);
-    }
+    var cube = null;
+    var skybox = null;
+    var ocean = null;
+
+    $.ajax({
+        type: "GET",
+        url: "data/cube.html",
+        dataType: 'text'
+    })
+        .done(function (msg) {
+            cube = Parse.obj(g.gl, msg);
+            //alert("Data Saved: " + msg);
+            console.log(cube);
+        });
+
+    $.ajax({
+        type: "GET",
+        url: "data/skydome.html",
+        dataType: 'text'
+    })
+        .done(function (msg) {
+            skybox = Parse.obj(g.gl, msg);
+            //alert("Data Saved: " + msg);
+            console.log(skybox + ' ' + typeof(skybox));
+        });
+
+    $.ajax({
+        type: "GET",
+        url: "data/mer.html",
+        dataType: 'text'
+    })
+        .done(function (msg) {
+            ocean = Parse.obj(g.gl, msg);
+            //alert("Data Saved: " + msg);
+        });
 
 
-    var hehe;
-
-    function initTexture() {
-        hehe = g.gl.createTexture();
-        hehe.image = new Image();
-        hehe.image.onload = function () {
-            handleLoadedTexture(hehe)
-        }
-
-        hehe.image.src = "images/bamboo.png";
-    }
-
-    initTexture();
-
-
-    var bv = new BUFFER(g.gl, [
-            // Front face
-            -1.0, -1.0, 1.0,
-             1.0, -1.0, 1.0,
-             1.0, 1.0, 1.0,
-            -1.0, 1.0, 1.0,
-
-            // Back face
-            -1.0, -1.0, -1.0,
-            -1.0, 1.0, -1.0,
-             1.0, 1.0, -1.0,
-             1.0, -1.0, -1.0,
-
-            // Top face
-            -1.0, 1.0, -1.0,
-            -1.0, 1.0, 1.0,
-             1.0, 1.0, 1.0,
-             1.0, 1.0, -1.0,
-
-            // Bottom face
-            -1.0, -1.0, -1.0,
-             1.0, -1.0, -1.0,
-             1.0, -1.0, 1.0,
-            -1.0, -1.0, 1.0,
-
-            // Right face
-             1.0, -1.0, -1.0,
-             1.0, 1.0, -1.0,
-             1.0, 1.0, 1.0,
-             1.0, -1.0, 1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0, 1.0,
-            -1.0, 1.0, 1.0,
-            -1.0, 1.0, -1.0,
-    ], 3,false);
-
-    var bt = new BUFFER(g.gl, [
-      // Front face
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-
-      // Back face
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-
-      // Top face
-      0.0, 1.0,
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-
-      // Bottom face
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-      1.0, 0.0,
-
-      // Right face
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-      0.0, 0.0,
-
-      // Left face
-      0.0, 0.0,
-      1.0, 0.0,
-      1.0, 1.0,
-      0.0, 1.0,
-    ], 2,false);
-
-    var bi = new BUFFER(g.gl, [
-        0, 1, 2, 0, 2, 3,    // Front face
-        4, 5, 6, 4, 6, 7,    // Back face
-        8, 9, 10, 8, 10, 11,  // Top face
-        12, 13, 14, 12, 14, 15, // Bottom face
-        16, 17, 18, 16, 18, 19, // Right face
-        20, 21, 22, 20, 22, 23  // Left face
-    ], 1, true);
-
-    var tt = new TEXTURE(g.gl, 'images/bamboo.png');
+    var tt = new TEXTURE(g.gl, 'images/bamboo.png'); 
+    var tsky = new TEXTURE(g.gl, 'images/skydome.png');
+    var tmer = new TEXTURE(g.gl, 'images/t3.png');
 
     var angley = 0;
     var anglez = 0;
@@ -143,11 +64,11 @@ $(function () {
     var x = 0, y = 0, z = 0;
     var tty = 0.0;
     var sky = new SKYBOX(g.gl, 300, 'images/sky.png');
-    var ter = new HEIGHTMAP(g.gl, 'images/h4.png', 'images/g1.jpg', 1, false, 256, 256);
+    var ter = new HEIGHTMAP(g.gl, 'images/hg.jpg', 'images/g1.jpg', 1, false, 256, 256);
     var mer = new MER(g.gl, [0, -10, 0], new TEXTURE(g.gl, 'images/t3.png'), tty);
 
-    var position = [50, 1, 50];
-    var look = [40, 0, 40];
+    var position = [0, 35, 0];
+    var look = [-40, 34, 40];
     var rayon = 10;
     var teta = 180;
     var phi = 35;
@@ -158,7 +79,6 @@ $(function () {
     var stack = [];
 
     setInterval(function () {
-        look[1] = 1;
         g.gl.viewport(0, 0, g.gl.viewportWidth, g.gl.viewportHeight);
         g.gl.clear(g.gl.COLOR_BUFFER_BIT | g.gl.DEPTH_BUFFER_BIT);
 
@@ -223,12 +143,16 @@ $(function () {
 
         mat4.lookAt(position, look, [0, 1, 0], mvMatrix);
 
-        //pt.draw([bv.buffer, bt.buffer, bi.buffer], tt, pMatrix, mvMatrix, look);
-        sky.draw(pt, pMatrix, mvMatrix, [-150, 0, -150]);
-        ter.draw(ptl, pMatrix, mvMatrix, [0, -20, 0]);
+        //pt.drawParsed(cube, tt, pMatrix, mvMatrix, look);
+        pt.drawParsed(skybox, tsky, pMatrix, mvMatrix, [0, 0, 0], [100, 100, 100]);
+        ter.draw(ptl, pMatrix, mvMatrix, [-100, -5, -100]);
+
+        ptm.drawParsed(ocean, tmer, pMatrix, mvMatrix, [0, 5, 0], [0.5,0.5,0.5]);
+        //sky.draw(pt, pMatrix, mvMatrix, [-150, 0, -150]);
+        
 
 
-        mer.draw(ptm, pMatrix, mvMatrix);
+        //mer.draw(ptm, pMatrix, mvMatrix);
 
         tty += 0.5;
 

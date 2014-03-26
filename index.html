@@ -45,6 +45,7 @@
     </div>
     <p id="p">Mode FPS</p>
 
+
     <script id="vertex-shader" type="x-shader/x-vertex">
         attribute vec3 aVP;
         attribute vec2 aTC;
@@ -190,13 +191,13 @@
         }
 
         float height(float x, float y, float z) {
-            return y + (sin(x + z + float(uUseLighting)) + cos(x + z + float(uUseLighting))) * 0.25;
+            return y + (sin(x + float(uUseLighting))) * 1.0;
         }
 
         vec3 normale(float x, float y, float z) {
-            if (x <= 1.0 || z <= 1.0 || x >= 98.0 || z >= 98.0)
+            /*if (x <= 1.0 || z <= 1.0 || x >= 98.0 || z >= 98.0)
                 return vec3(0.0,0.0,-1.0);
-            else {
+            else {*/
                 vec3 v1 = vec3(x, height(x, y, z - 1.0),z - 1.0);
                 vec3 v2 = vec3(x + 1.0, height(x + 1.0, y, z),z);
                 vec3 v3 = vec3(x, height(x, y, z + 1.0),z + 1.0);
@@ -211,7 +212,7 @@
                 normalize(n);
 
                 return n;
-            }
+            /*}*/
         }
 
         int modulo(int x, int m) {

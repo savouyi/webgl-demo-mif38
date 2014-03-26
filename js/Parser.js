@@ -1,12 +1,19 @@
 ﻿
 var Parse = {};
 
-Parse.obj = function (str) {
+Parse.obj = function (gl, str) {
     var o = {
         v: [],
         t: [],
         n: [],
-        i: []
+        i: [],
+
+        bv: [],
+        bt: [],
+        bn: [],
+        bi: [],
+
+        nb: 0
     };
 
     var v = [];
@@ -61,9 +68,9 @@ Parse.obj = function (str) {
 
             for (var j = 1; j < 4; j++) {
                 var b = p[j].split('/');
-                var x = parseInt(b[0] - 1);
-                var y = parseInt(b[1] - 1);
-                var z = parseInt(b[2] - 1);
+                var x = parseInt(b[0]) - 1;
+                var y = parseInt(b[1]) - 1;
+                var z = parseInt(b[2]) - 1;
 
                 f.push([x, y, z]);
             }
@@ -77,8 +84,38 @@ Parse.obj = function (str) {
     console.log(minx + ' ' + miny + ' ' + minz + ' ' + maxx + ' ' + maxy + ' ' + maxz);
 
     for (var k = 0; k < f.length; k++) {
+        var h = k - parseInt(k / 65534) * 65534;
         var vv = f[k][0];
         var tt = f[k][1];
         var nn = f[k][2];
+
+        o.i.push(h);
+        o.v.push(v[vv][0]); o.v.push(v[vv][1]); o.v.push(v[vv][2]);
+        o.t.push(t[tt][0]); o.t.push(t[tt][1]);
+        o.n.push(n[nn][0]); o.n.push(n[nn][1]); o.n.push(n[nn][2]);
+
+        if (h == 65534) { // max pour index
+            
+            o.bv.push(new BUFFER(gl, o.v, 3, false));
+            o.bt.push(new BUFFER(gl, o.t, 2, false));
+            o.bn.push(new BUFFER(gl, o.n, 3, false));
+            o.bi.push(new BUFFER(gl, o.i, 1, true));
+
+            o.nb++;
+
+            o.i.clear();
+            o.v.clear();
+            o.t.clear();
+            o.n.clear();
+        }
     }
+
+    o.bv.push(new BUFFER(gl, o.v, 3, false));
+    o.bt.push(new BUFFER(gl, o.t, 2, false));
+    o.bn.push(new BUFFER(gl, o.n, 3, false));
+    o.bi.push(new BUFFER(gl, o.i, 1, true));
+
+    o.nb++;
+
+    return o;
 };
