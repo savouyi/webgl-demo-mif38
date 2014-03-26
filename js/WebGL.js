@@ -10,7 +10,7 @@ var GL = function (id) {
     var gl = null;
 
     try {
-        gl = canvas.getContext("experimental-webgl");
+        gl = canvas.getContext("experimental-webgl", { alpha: false });
         gl.viewportWidth = canvas.width;
         gl.viewportHeight = canvas.height;
     } catch (e) {
@@ -22,6 +22,8 @@ var GL = function (id) {
         o.gl = gl;
 
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.BLEND);
         gl.enable(gl.DEPTH_TEST);
 
         gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -343,6 +345,17 @@ PROGRAM.mer.prototype = {
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, texture.tex);
             gl.uniform1i(o.p.samplerUniform, 0);
+
+            var wavelength = [0,2,3,4,5,6,7];
+            var amplitude = [0,2,3,4,5,6,7];
+            var speed = [0,2,3,4,5,6,7];
+            var direction = [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]];
+
+            gl.uniform1f(gl.getUniformLocation(o.p, "wavelength"), 8, wavelength);
+            gl.uniform1f(gl.getUniformLocation(o.p, "amplitude"), 8, amplitude);
+            gl.uniform1f(gl.getUniformLocation(o.p, "speed"), 8, speed);
+            gl.uniform2f(gl.getUniformLocation(o.p, "direction"), 8, direction);
+
             var lighting = ll + 1;
             ll += 1;
             gl.uniform1i(o.p.useLightingUniform, lighting);

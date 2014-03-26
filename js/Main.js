@@ -146,11 +146,11 @@ $(function () {
     var ter = new HEIGHTMAP(g.gl, 'images/h4.png', 'images/g1.jpg', 1, false, 256, 256);
     var mer = new MER(g.gl, [0, -10, 0], new TEXTURE(g.gl, 'images/t3.png'), tty);
 
-    var position = [10, 1, 0];
-    var look = [0, 0, 0];
+    var position = [50, 1, 50];
+    var look = [40, 0, 40];
     var rayon = 10;
-    var teta = 0;
-    var phi = 0;
+    var teta = 180;
+    var phi = 35;
 
     var _forward = [0, 0, 0];
     var _left = [0, 0, 0];
@@ -223,7 +223,7 @@ $(function () {
 
         mat4.lookAt(position, look, [0, 1, 0], mvMatrix);
 
-        pt.draw([bv.buffer, bt.buffer, bi.buffer], tt, pMatrix, mvMatrix, look);
+        //pt.draw([bv.buffer, bt.buffer, bi.buffer], tt, pMatrix, mvMatrix, look);
         sky.draw(pt, pMatrix, mvMatrix, [-150, 0, -150]);
         ter.draw(ptl, pMatrix, mvMatrix, [0, -20, 0]);
 
