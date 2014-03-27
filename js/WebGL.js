@@ -10,7 +10,7 @@ var GL = function (id) {
     var gl = null;
 
     try {
-        gl = canvas.getContext("experimental-webgl", { alpha: false });
+        gl = canvas.getContext("webgl", { alpha: false });
         gl.viewportWidth = canvas.width;
         gl.viewportHeight = canvas.height;
     } catch (e) {
@@ -306,6 +306,15 @@ PROGRAM.textureLight.prototype = {
             gl.uniformMatrix3fv(o.p.nMatrixUniform, false, normalMatrix);
 
             gl.drawElements(gl.TRIANGLES, buffer[2].numItems, gl.UNSIGNED_SHORT, 0);
+        },
+
+    drawParsed:
+        function (buffer, texture, pmat, vmat, s) {
+            if (buffer != undefined) {
+                for (var i = 0; i < buffer.nb; i++) {
+                    this.draw([buffer.bv[i].buffer, buffer.bt[i].buffer, buffer.bi[i].buffer, buffer.bn[i].buffer], texture, pmat, vmat, s);
+                }
+            }
         }
 };
 

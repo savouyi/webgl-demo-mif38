@@ -149,8 +149,6 @@ $(function () {
 
         ptm.drawParsed(ocean, tmer, pMatrix, mvMatrix, [0, 5, 0], [0.5,0.5,0.5]);
         //sky.draw(pt, pMatrix, mvMatrix, [-150, 0, -150]);
-        
-
 
         //mer.draw(ptm, pMatrix, mvMatrix);
 
